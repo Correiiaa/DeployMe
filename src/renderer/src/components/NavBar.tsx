@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faUser, faRocket, faGear } from '@fortawesome/free-solid-svg-icons'
+import { faUser, faRocket, faGear, faMoon } from '@fortawesome/free-solid-svg-icons'
 
 export default function NavBar() {
   return (
@@ -10,12 +10,19 @@ export default function NavBar() {
           Deploy
         </div>
         <span className="text-slate-600 mr-auto font-bold">Me</span>
-        <nav className="items-center gap-6 grid grid-cols-2">
-          <div className="shadow-2xl shadow-gray-600 rounded-2xl bg-stone-300 min-w-25 h-11 hover:bg-stone-400 cursor-pointer flex items-center justify-center">
+        <nav className="items-center gap-6 flex flex-row ">
+          <div className="rounded-2xl bg-stone-300 min-w-25 h-11 hover:bg-stone-400 cursor-pointer flex items-center justify-center">
             <FontAwesomeIcon icon={faUser} className="pr-3" />
             <div className="text-black self-center text-base text-center">User</div>
           </div>
-          <FontAwesomeIcon icon={faGear} className="mr-5 hover:cursor-pointer" />
+          <FontAwesomeIcon
+            icon={faGear}
+            className=" hover:cursor-pointer hover:text-stone-600 ml-auto w-5"
+          />
+          <FontAwesomeIcon
+            icon={faMoon}
+            className="hover:cursor-pointer hover:text-stone-600 mr-auto w-5"
+          />
         </nav>
       </div>
     </header>
