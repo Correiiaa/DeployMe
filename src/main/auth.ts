@@ -7,6 +7,7 @@ import { google } from 'googleapis'
 import type { Credentials, OAuth2Client } from 'google-auth-library'
 
 const OAUTH_STORE_KEY = 'googleOAuthTokens'
+const OAUTH_STATE_BYTES = 24
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
   'https://www.googleapis.com/auth/userinfo.email',
@@ -76,7 +77,7 @@ export class GoogleAuthService {
       )
     }
 
-    const state = randomBytes(24).toString('hex')
+    const state = randomBytes(OAUTH_STATE_BYTES).toString('hex')
     const authUrl = this.client.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent',

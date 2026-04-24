@@ -8,6 +8,6 @@ export const DEFAULT_APPLICATIONS: ApplicationRow[] = [
     status: 'Applied',
     dateApplied: '2024-06-01',
     notes: 'Initial application',
-    cvPath: '/home/toni/Downloads/my-first-app-cv.pdf'
+    cvPath: undefined
   }
 ]

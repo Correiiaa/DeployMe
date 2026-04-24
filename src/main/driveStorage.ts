@@ -3,6 +3,10 @@ import type { OAuth2Client } from 'google-auth-library'
 
 import type { CloudStorage } from './cloudStorage'
 
+function escapeDriveQueryValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
 export class GoogleDriveStorage implements CloudStorage {
   private readonly drive: drive_v3.Drive
 
@@ -11,7 +15,7 @@ export class GoogleDriveStorage implements CloudStorage {
   }
 
   async readFile(fileId: string): Promise<string> {
-    const response = await this.drive.files.get({ fileId, alt: 'media' }, { responseType: 'json' })
+    const response = await this.drive.files.get({ fileId, alt: 'media' }, { responseType: 'text' })
 
     if (typeof response.data === 'string') {
       return response.data
@@ -35,8 +39,10 @@ export class GoogleDriveStorage implements CloudStorage {
   }
 
   async findFileByName(fileName: string): Promise<string | null> {
+    const safeFileName = escapeDriveQueryValue(fileName)
+
     const response = await this.drive.files.list({
-      q: `name='${fileName.replace(/'/g, "\\'")}' and trashed=false and 'root' in parents`,
+      q: `name='${safeFileName}' and trashed=false and 'root' in parents`,
       fields: 'files(id, name)',
       pageSize: 1,
       spaces: 'drive'

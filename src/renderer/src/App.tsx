@@ -5,6 +5,8 @@ import type { ApplicationRow } from './components/ApplicationTable'
 import { DEFAULT_APPLICATIONS } from './constants/defaultApplications'
 import { useEffect, useRef, useState } from 'react'
 
+const AUTO_SAVE_DEBOUNCE_MS = 500
+
 type GoogleAuthStatus = {
   isAuthenticated: boolean
   user: {
@@ -53,7 +55,7 @@ function App(): React.JSX.Element {
       window.api
         .saveApplications(applications)
         .catch((error) => console.error('Failed to persist application data', error))
-    }, 500)
+    }, AUTO_SAVE_DEBOUNCE_MS)
 
     return () => {
       window.clearTimeout(timeoutId)

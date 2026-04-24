@@ -9,6 +9,7 @@ type DriveStore = {
   driveDataFileId?: string
 }
 
+/** Empty JSON array used for new local/cloud application data files. */
 const DEFAULT_CONTENT = '[]'
 
 export class ApplicationDataSync {

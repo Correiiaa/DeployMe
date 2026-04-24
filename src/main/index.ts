@@ -7,6 +7,7 @@ import { ApplicationDataSync } from './dataSync'
 
 const CLOUD_DATA_FILE_NAME = 'deployme_data.json'
 const LOCAL_DATA_FILE_NAME = 'vagas.json'
+const BACKGROUND_SYNC_DELAY_MS = 1500
 
 const dataSync = new ApplicationDataSync(
   join(app.getPath('userData'), LOCAL_DATA_FILE_NAME),
@@ -20,7 +21,8 @@ function parseApplications(rawData: string): unknown[] {
   try {
     const parsed = JSON.parse(rawData)
     return Array.isArray(parsed) ? parsed : []
-  } catch {
+  } catch (error) {
+    console.error('[DataSync] Failed to parse application data:', error)
     return []
   }
 }
@@ -83,7 +85,7 @@ ipcMain.handle('applications-save', async (_, applications: unknown) => {
     dataSync.syncLocalToCloud().catch((error) => {
       console.error('[DataSync] Background cloud sync failed:', error)
     })
-  }, 1500)
+  }, BACKGROUND_SYNC_DELAY_MS)
 })
 
 function createWindow(): void {
