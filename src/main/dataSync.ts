@@ -1,4 +1,4 @@
-import Store from 'electron-store'
+import StoreImport from 'electron-store'
 import { promises as fs } from 'node:fs'
 import { dirname } from 'node:path'
 
@@ -11,6 +11,9 @@ type DriveStore = {
 
 /** Empty JSON array used for new local/cloud application data files. */
 const DEFAULT_CONTENT = '[]'
+
+const Store =
+  (StoreImport as typeof StoreImport & { default?: typeof StoreImport }).default ?? StoreImport
 
 export class ApplicationDataSync {
   private readonly localFilePath: string

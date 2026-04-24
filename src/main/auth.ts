@@ -1,10 +1,13 @@
-import Store from 'electron-store'
+import StoreImport from 'electron-store'
 import { shell } from 'electron'
 import { createServer } from 'node:http'
 import { URL } from 'node:url'
 import { randomBytes } from 'node:crypto'
 import { google } from 'googleapis'
 import type { Credentials, OAuth2Client } from 'google-auth-library'
+
+const Store =
+  (StoreImport as typeof StoreImport & { default?: typeof StoreImport }).default ?? StoreImport
 
 const OAUTH_STORE_KEY = 'googleOAuthTokens'
 const OAUTH_STATE_BYTES = 24
