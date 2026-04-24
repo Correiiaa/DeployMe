@@ -28,7 +28,9 @@
     "@tailwindcss/vite": "^4.2.4",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/vue-table": "^8.21.3",
+    "electron-store": "^11.0.2",
     "electron-updater": "^6.3.9",
+    "googleapis": "^171.4.0",
     "tailwindcss": "^4.2.4"
   },
   "devDependencies": {
