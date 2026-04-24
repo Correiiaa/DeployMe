@@ -3,6 +3,15 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/DeployMe.png?asset'
 
+ipcMain.handle('open-cv', async (_, filePath: string) => {
+  if (!filePath) return
+
+  const errorMessage = await shell.openPath(filePath)
+  if (errorMessage) {
+    throw new Error(errorMessage)
+  }
+})
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({

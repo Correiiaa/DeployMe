@@ -1,18 +1,67 @@
-import { faPlus } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCircleInfo,
+  faClock,
+  faFilePdf,
+  faPlus,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
-import React, { useState } from 'react'
+import { useState } from 'react'
 
-export default function ApplicationTable() {
-  const [data, setData] = useState([
+const followUpThresholdDays = 14
+
+export type ApplicationRow = {
+  id: string
+  name: string
+  role: string
+  status: string
+  dateApplied: string
+  notes: string
+  cvPath?: string
+}
+
+function getDaysSince(dateValue: string) {
+  const startDate = new Date(dateValue)
+  const currentDate = new Date()
+
+  const startUtc = Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+  const currentUtc = Date.UTC(
+    currentDate.getFullYear(),
+    currentDate.getMonth(),
+    currentDate.getDate()
+  )
+
+  return Math.floor((currentUtc - startUtc) / (1000 * 60 * 60 * 24))
+}
+
+type ApplicationTableProps = {
+  onSelectApplication: (application: ApplicationRow) => void
+}
+
+export default function ApplicationTable({ onSelectApplication }: ApplicationTableProps) {
+  const [data, setData] = useState<ApplicationRow[]>([
     {
+      id: 'my-first-app',
       name: 'My First App',
       role: 'Software Engineer',
       status: 'Applied',
-      lastDeployed: '2024-06-01'
+      dateApplied: '2024-06-01',
+      notes: 'Initial application',
+      cvPath: '/home/toni/Downloads/my-first-app-cv.pdf'
     }
     // Add more application data here
   ])
+
+  async function openCv(filePath?: string) {
+    if (!filePath) return
+
+    try {
+      await window.api.openCv(filePath)
+    } catch (error) {
+      console.error('Failed to open CV', error)
+    }
+  }
 
   const table = useReactTable({
     data,
@@ -40,7 +89,8 @@ export default function ApplicationTable() {
                   old.map((r, i) => (i === row.index ? { ...r, status: newStatus } : r))
                 )
               }}
-              className="px-3 py-2 rounded-md text-sm bg-transparent border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+              onClick={(e) => e.stopPropagation()}
+              className="px-3 py-2 rounded-md text-sm bg-transparent border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200 hover:cursor-pointer"
             >
               {options.map((opt) => (
                 <option key={opt} value={opt}>
@@ -52,17 +102,66 @@ export default function ApplicationTable() {
         }
       },
       {
-        header: 'Last Deployed',
-        accessorKey: 'lastDeployed'
+        header: 'Date Applied',
+        accessorKey: 'dateApplied'
       },
       {
-        header: 'Actions',
-        cell: () => (
-          <div className="flex gap-3 items-center">
-            <button className="text-sm text-gray-600 hover:text-gray-800">View</button>
-            <button className="text-sm text-red-500 hover:underline">Delete</button>
-          </div>
-        )
+        header: 'Follow-up',
+        cell: ({ row }) => {
+          const daysSinceApplication = getDaysSince(row.original.dateApplied)
+          const isOverdue = daysSinceApplication > followUpThresholdDays
+
+          return (
+            <div
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm ${
+                isOverdue
+                  ? 'border border-red-200 bg-red-50 text-red-700'
+                  : 'border border-gray-200 bg-gray-50 text-gray-600'
+              }`}
+            >
+              {isOverdue ? <FontAwesomeIcon icon={faClock} className="h-3.5 w-3.5" /> : null}
+              <span>Sem resposta há {daysSinceApplication} dias</span>
+            </div>
+          )
+        }
+      },
+      {
+        header: 'Notes',
+        accessorKey: 'notes'
+      },
+      {
+        header: 'CV',
+        cell: ({ row }) => {
+          const cvPath = row.original.cvPath
+
+          return (
+            <button
+              type="button"
+              disabled={!cvPath}
+              onClick={(e) => {
+                e.stopPropagation()
+                openCv(cvPath)
+              }}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FontAwesomeIcon icon={faFilePdf} />
+            </button>
+          )
+        }
+      },
+      {
+        header: 'Detalhes',
+        cell: ({ row }) => {
+          return (
+            <button
+              type="button"
+              onClick={() => onSelectApplication(row.original)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
+            >
+              <FontAwesomeIcon icon={faCircleInfo} />
+            </button>
+          )
+        }
       }
     ],
     getCoreRowModel: getCoreRowModel()
@@ -111,18 +210,37 @@ export default function ApplicationTable() {
             ))}
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors"
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-6 py-4 text-sm text-gray-700 align-middle">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            {table.getRowModel().rows.map((row) => {
+              const daysSinceApplication = getDaysSince(row.original.dateApplied)
+              const isOverdue = daysSinceApplication > followUpThresholdDays
+
+              return (
+                <tr
+                  key={row.id}
+                  className={`odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors ${
+                    isOverdue ? 'ring-1 ring-inset ring-red-200' : ''
+                  }`}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-6 py-4 text-sm text-gray-700 align-middle">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                  <td className="px-6 py-4 align-middle text-center">
+                    <button
+                      type="button"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center justify-center"
+                    >
+                      <FontAwesomeIcon
+                        icon={faTrash}
+                        className="text-gray-400 hover:text-gray-600 hover:cursor-pointer w-4"
+                      />
+                    </button>
                   </td>
-                ))}
-              </tr>
-            ))}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
