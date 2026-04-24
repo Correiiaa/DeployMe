@@ -3,7 +3,12 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  openCv: (filePath: string) => ipcRenderer.invoke('open-cv', filePath)
+  openCv: (filePath: string) => ipcRenderer.invoke('open-cv', filePath),
+  loginWithGoogle: () => ipcRenderer.invoke('google-auth-login'),
+  getGoogleAuthStatus: () => ipcRenderer.invoke('google-auth-status'),
+  loadApplications: () => ipcRenderer.invoke('applications-load'),
+  saveApplications: (applications: unknown[]) =>
+    ipcRenderer.invoke('applications-save', applications)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

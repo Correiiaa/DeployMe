@@ -7,7 +7,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
-import { useState } from 'react'
 
 const followUpThresholdDays = 14
 
@@ -21,7 +20,7 @@ export type ApplicationRow = {
   cvPath?: string
 }
 
-function getDaysSince(dateValue: string) {
+function getDaysSince(dateValue: string): number {
   const startDate = new Date(dateValue)
   const currentDate = new Date()
 
@@ -36,24 +35,17 @@ function getDaysSince(dateValue: string) {
 }
 
 type ApplicationTableProps = {
+  data: ApplicationRow[]
+  onDataChange: (applications: ApplicationRow[]) => void
   onSelectApplication: (application: ApplicationRow) => void
 }
 
-export default function ApplicationTable({ onSelectApplication }: ApplicationTableProps) {
-  const [data, setData] = useState<ApplicationRow[]>([
-    {
-      id: 'my-first-app',
-      name: 'My First App',
-      role: 'Software Engineer',
-      status: 'Applied',
-      dateApplied: '2024-06-01',
-      notes: 'Initial application',
-      cvPath: '/home/toni/Downloads/my-first-app-cv.pdf'
-    }
-    // Add more application data here
-  ])
-
-  async function openCv(filePath?: string) {
+export default function ApplicationTable({
+  data,
+  onDataChange,
+  onSelectApplication
+}: ApplicationTableProps): React.JSX.Element {
+  async function openCv(filePath?: string): Promise<void> {
     if (!filePath) return
 
     try {
@@ -85,8 +77,8 @@ export default function ApplicationTable({ onSelectApplication }: ApplicationTab
               value={status}
               onChange={(e) => {
                 const newStatus = e.target.value
-                setData((old) =>
-                  old.map((r, i) => (i === row.index ? { ...r, status: newStatus } : r))
+                onDataChange(
+                  data.map((r, i) => (i === row.index ? { ...r, status: newStatus } : r))
                 )
               }}
               onClick={(e) => e.stopPropagation()}

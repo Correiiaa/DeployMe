@@ -17,8 +17,13 @@ $ npm install
 ### Development
 
 ```bash
+$ export GOOGLE_CLIENT_ID=your_google_client_id
+$ export GOOGLE_CLIENT_SECRET=your_google_client_secret
+$ export GOOGLE_REDIRECT_URI=http://127.0.0.1:42813/oauth2callback
 $ npm run dev
 ```
+
+When authenticated with Google, DeployMe stores access/refresh tokens with `electron-store` and syncs `vagas.json` with `deployme_data.json` on Google Drive.
 
 ### Build
 
