@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
+import { useState } from 'react'
 
 const followUpThresholdDays = 14
 
@@ -49,6 +50,8 @@ export default function ApplicationTable({
     return new Date().toISOString().slice(0, 10)
   }
 
+  const [role, setRole] = useState('')
+
   function handleAddJob(): void {
     const newJob: ApplicationRow = {
       id: crypto.randomUUID(),
@@ -86,7 +89,21 @@ export default function ApplicationTable({
       },
       {
         header: 'Role / Position',
-        accessorKey: 'role'
+        accessorKey: 'role',
+        cell: ({ getValue, row }) => {
+          const role = getValue() as string
+          return (
+            <input
+              type="text"
+              value={role}
+              onChange={(e) => {
+                setRole(e.target.value)
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full px-3 py-2 rounded-md text-sm bg-transparent border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+            />
+          )
+        }
       },
       {
         header: 'Status',
