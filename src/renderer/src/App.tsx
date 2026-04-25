@@ -21,6 +21,7 @@ function toIsoDate(dateValue: string): string {
 
   const parsedDate = new Date(dateValue)
   if (Number.isNaN(parsedDate.getTime())) {
+    console.warn('Invalid dateApplied value received; defaulting to current date', dateValue)
     return new Date().toISOString().slice(0, 10)
   }
 
