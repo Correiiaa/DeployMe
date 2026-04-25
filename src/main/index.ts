@@ -68,6 +68,17 @@ ipcMain.handle('applications-load', async () => {
   }
 })
 
+ipcMain.handle('get-vagas', async () => {
+  try {
+    const cloudData = await dataSync.pullFromCloud()
+    const localData = cloudData ?? (await dataSync.readLocalData())
+    return parseApplications(localData)
+  } catch (error) {
+    console.error('[DataSync] Failed to load vagas:', error)
+    return []
+  }
+})
+
 ipcMain.handle('applications-save', async (_, applications: unknown) => {
   const serializedData = JSON.stringify(Array.isArray(applications) ? applications : [], null, 2)
 
@@ -75,6 +86,27 @@ ipcMain.handle('applications-save', async (_, applications: unknown) => {
     await dataSync.saveLocalData(serializedData)
   } catch (error) {
     console.error('[DataSync] Failed to save local applications:', error)
+    throw error
+  }
+
+  if (pendingSyncTimer) {
+    clearTimeout(pendingSyncTimer)
+  }
+
+  pendingSyncTimer = setTimeout(() => {
+    dataSync.syncLocalToCloud().catch((error) => {
+      console.error('[DataSync] Background cloud sync failed:', error)
+    })
+  }, BACKGROUND_SYNC_DELAY_MS)
+})
+
+ipcMain.handle('save-vagas', async (_, applications: unknown) => {
+  const serializedData = JSON.stringify(Array.isArray(applications) ? applications : [], null, 2)
+
+  try {
+    await dataSync.saveLocalData(serializedData)
+  } catch (error) {
+    console.error('[DataSync] Failed to save local vagas:', error)
     throw error
   }
 

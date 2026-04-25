@@ -6,6 +6,8 @@ const api = {
   openCv: (filePath: string) => ipcRenderer.invoke('open-cv', filePath),
   loginWithGoogle: () => ipcRenderer.invoke('google-auth-login'),
   getGoogleAuthStatus: () => ipcRenderer.invoke('google-auth-status'),
+  getVagas: () => ipcRenderer.invoke('get-vagas'),
+  saveVagas: (applications: unknown[]) => ipcRenderer.invoke('save-vagas', applications),
   loadApplications: () => ipcRenderer.invoke('applications-load'),
   saveApplications: (applications: unknown[]) =>
     ipcRenderer.invoke('applications-save', applications)
