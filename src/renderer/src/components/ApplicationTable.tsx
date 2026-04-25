@@ -45,6 +45,28 @@ export default function ApplicationTable({
   onDataChange,
   onSelectApplication
 }: ApplicationTableProps): React.JSX.Element {
+  function getTodayIsoDate(): string {
+    return new Date().toISOString().slice(0, 10)
+  }
+
+  function handleAddJob(): void {
+    const newJob: ApplicationRow = {
+      id: crypto.randomUUID(),
+      name: '',
+      role: '',
+      status: 'Applied',
+      dateApplied: getTodayIsoDate(),
+      notes: '',
+      cvPath: undefined
+    }
+
+    onDataChange([...data, newJob])
+  }
+
+  function handleDeleteJob(index: number): void {
+    onDataChange(data.filter((_, currentIndex) => currentIndex !== index))
+  }
+
   async function openCv(filePath?: string): Promise<void> {
     if (!filePath) return
 
@@ -168,10 +190,14 @@ export default function ApplicationTable({
             <div className="text-sm font-medium text-gray-800">Active Application</div>
             <div className="text-sm text-gray-400 ml-2">( 3 )</div>
           </div>
-          <div className="rounded-lg bg-black hover:bg-stone-900 h-9 flex items-center justify-center hover:cursor-pointer px-3">
+          <button
+            type="button"
+            onClick={handleAddJob}
+            className="rounded-lg bg-black hover:bg-stone-900 h-9 flex items-center justify-center hover:cursor-pointer px-3"
+          >
             <FontAwesomeIcon icon={faPlus} className="pr-2 text-white" />
             <div className="text-sm font-medium text-white">Add New Job</div>
-          </div>
+          </button>
         </div>
 
         {/* Search bar */}
@@ -221,7 +247,10 @@ export default function ApplicationTable({
                   <td className="px-6 py-4 align-middle text-center">
                     <button
                       type="button"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteJob(row.index)
+                      }}
                       className="inline-flex items-center justify-center"
                     >
                       <FontAwesomeIcon
