@@ -13,7 +13,7 @@ import { InputText } from 'primereact/inputtext'
 import { useEffect, useState } from 'react'
 
 const followUpThresholdDays = 14
-const AUTO_SAVE_DELAY_MS = 70
+const AUTO_SAVE_DELAY_MS = 700
 
 export type ApplicationRow = {
   id: string
@@ -48,6 +48,11 @@ type ApplicationTableProps = {
 const statusOptions = ['Proposed', 'Rejected', 'Applied', 'Interview']
 type EditableField = 'name' | 'role' | 'status' | 'dateApplied' | 'notes'
 type RowDraft = Partial<Pick<ApplicationRow, EditableField>>
+const headerCellClass =
+  'px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 bg-slate-100/80'
+const bodyCellClass = 'px-5 py-4 align-middle text-sm text-slate-700'
+const inputClassName =
+  'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200'
 
 export default function ApplicationTable({
   data,
@@ -213,20 +218,14 @@ export default function ApplicationTable({
     <div className="w-full flex flex-col gap-4 mt-5">
       {/* Top bar */}
       <div className="flex flex-row">
-        <div className="grid grid-cols-2 gap-4 w-1/2">
-          <div className="rounded-lg bg-white h-9 flex items-center justify-center hover:cursor-pointer border border-gray-100">
-            <div className="text-sm font-medium text-gray-800">Active Application</div>
-            <div className="text-sm text-gray-400 ml-2">( {displayedRows.length} )</div>
-          </div>
-          <button
-            type="button"
-            onClick={handleAddJob}
-            className="rounded-lg bg-black hover:bg-stone-900 h-9 flex items-center justify-center hover:cursor-pointer px-3"
-          >
-            <FontAwesomeIcon icon={faPlus} className="pr-2 text-white" />
-            <div className="text-sm font-medium text-white">Add New Job</div>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleAddJob}
+          className="rounded-lg bg-black hover:bg-stone-900 h-9 flex items-center justify-center hover:cursor-pointer px-3"
+        >
+          <FontAwesomeIcon icon={faPlus} className="pr-2 text-white" />
+          <div className="text-sm font-medium text-white">Add New Job</div>
+        </button>
 
         <div className="w-1/3 ml-auto">
           <input
@@ -238,23 +237,21 @@ export default function ApplicationTable({
       </div>
 
       {/* Table */}
-      <div className="w-full bg-white rounded-2xl overflow-hidden mt-5 shadow-sm border border-gray-100">
+      <div className="mt-5 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <DataTable
           value={displayedRows}
           dataKey="id"
-          className="w-full text-black"
-          pt={{
-            thead: { className: 'bg-white' },
-            headerRow: { className: 'border-b border-gray-100' },
-            bodyRow: {
-              className:
-                'odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-100'
-            }
-          }}
+          className="text-black"
+          tableClassName="w-full border-separate border-spacing-x-3 border-spacing-y-2"
+          rowClassName={() =>
+            'odd:bg-white even:bg-slate-50/40 hover:bg-slate-50 transition-colors'
+          }
         >
           <Column
             field="name"
             header="Company Name"
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
             body={(row) => (
               <InputText
                 value={row.name}
@@ -264,13 +261,15 @@ export default function ApplicationTable({
                     flushNow()
                   }
                 }}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                className={inputClassName}
               />
             )}
           />
           <Column
             field="role"
             header="Role / Position"
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
             body={(row) => (
               <InputText
                 value={row.role}
@@ -280,25 +279,35 @@ export default function ApplicationTable({
                     flushNow()
                   }
                 }}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                className={inputClassName}
               />
             )}
           />
           <Column
             field="status"
             header="Status"
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
             body={(row) => (
               <Dropdown
                 value={row.status}
                 options={statusOptions}
                 onChange={(e) => updateField(row.id, 'status', e.value as string)}
-                className="w-full text-sm"
+                className="w-full rounded-lg border border-slate-200 bg-white text-sm text-slate-700 shadow-sm"
+                panelClassName="border border-slate-200 bg-white shadow-sm rounded-lg"
+                pt={{
+                  root: { className: '!bg-white' },
+                  input: { className: '!bg-white !text-slate-700' },
+                  trigger: { className: '!bg-white !text-slate-500' }
+                }}
               />
             )}
           />
           <Column
             field="dateApplied"
             header="Date Applied"
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
             body={(row) => (
               <input
                 type="date"
@@ -309,14 +318,21 @@ export default function ApplicationTable({
                     flushNow()
                   }
                 }}
-                className="px-3 py-2 rounded-md text-sm border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                className={inputClassName}
               />
             )}
           />
-          <Column header="Follow-up" body={followUpBody} />
+          <Column
+            header="Follow-up"
+            body={followUpBody}
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
+          />
           <Column
             field="notes"
             header="Notes"
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
             body={(row) => (
               <InputText
                 value={row.notes}
@@ -326,13 +342,27 @@ export default function ApplicationTable({
                     flushNow()
                   }
                 }}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                className={inputClassName}
               />
             )}
           />
-          <Column header="CV" body={cvBody} />
-          <Column header="Detalhes" body={detailsBody} />
-          <Column body={deleteBody} />
+          <Column
+            header="CV"
+            body={cvBody}
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
+          />
+          <Column
+            header="Detalhes"
+            body={detailsBody}
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
+          />
+          <Column
+            headerClassName={headerCellClass}
+            bodyClassName={bodyCellClass}
+            body={deleteBody}
+          />
         </DataTable>
       </div>
     </div>
