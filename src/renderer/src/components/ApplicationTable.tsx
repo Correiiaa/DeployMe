@@ -6,10 +6,14 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table'
-import { useState } from 'react'
+import { Column } from 'primereact/column'
+import { DataTable } from 'primereact/datatable'
+import { Dropdown } from 'primereact/dropdown'
+import { InputText } from 'primereact/inputtext'
+import { useEffect, useState } from 'react'
 
 const followUpThresholdDays = 14
+const AUTO_SAVE_DELAY_MS = 70
 
 export type ApplicationRow = {
   id: string
@@ -41,16 +45,45 @@ type ApplicationTableProps = {
   onSelectApplication: (application: ApplicationRow) => void
 }
 
+const statusOptions = ['Proposed', 'Rejected', 'Applied', 'Interview']
+type EditableField = 'name' | 'role' | 'status' | 'dateApplied' | 'notes'
+type RowDraft = Partial<Pick<ApplicationRow, EditableField>>
+
 export default function ApplicationTable({
   data,
   onDataChange,
   onSelectApplication
 }: ApplicationTableProps): React.JSX.Element {
+  const [rowDrafts, setRowDrafts] = useState<Record<string, RowDraft>>({})
+
   function getTodayIsoDate(): string {
     return new Date().toISOString().slice(0, 10)
   }
 
-  const [role, setRole] = useState('')
+  function buildRowsWithDrafts(
+    baseRows: ApplicationRow[],
+    drafts: Record<string, RowDraft>
+  ): ApplicationRow[] {
+    return baseRows.map((row) => {
+      const draft = drafts[row.id]
+      return draft ? { ...row, ...draft } : row
+    })
+  }
+
+  const displayedRows = buildRowsWithDrafts(data, rowDrafts)
+
+  useEffect(() => {
+    if (Object.keys(rowDrafts).length === 0) return
+
+    const timeoutId = window.setTimeout(() => {
+      onDataChange(buildRowsWithDrafts(data, rowDrafts))
+      setRowDrafts({})
+    }, AUTO_SAVE_DELAY_MS)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [rowDrafts, data, onDataChange])
 
   function handleAddJob(): void {
     const newJob: ApplicationRow = {
@@ -63,16 +96,22 @@ export default function ApplicationTable({
       cvPath: undefined
     }
 
-    onDataChange([...data, newJob])
+    onDataChange([...displayedRows, newJob])
+    setRowDrafts({})
   }
 
-  function handleDeleteJob(index: number): void {
-    onDataChange(data.filter((_, currentIndex) => currentIndex !== index))
+  function handleDeleteJob(id: string): void {
+    onDataChange(displayedRows.filter((application) => application.id !== id))
+    setRowDrafts((currentDrafts) => {
+      if (!currentDrafts[id]) return currentDrafts
+      const nextDrafts = { ...currentDrafts }
+      delete nextDrafts[id]
+      return nextDrafts
+    })
   }
 
   async function openCv(filePath?: string): Promise<void> {
     if (!filePath) return
-
     try {
       await window.api.openCv(filePath)
     } catch (error) {
@@ -80,132 +119,104 @@ export default function ApplicationTable({
     }
   }
 
-  const table = useReactTable({
-    data,
-    columns: [
-      {
-        header: 'Company Name',
-        accessorKey: 'name'
-      },
-      {
-        header: 'Role / Position',
-        accessorKey: 'role',
-        cell: ({ getValue, row }) => {
-          const role = getValue() as string
-          return (
-            <input
-              type="text"
-              value={role}
-              onChange={(e) => {
-                setRole(e.target.value)
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full px-3 py-2 rounded-md text-sm bg-transparent border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
-            />
-          )
-        }
-      },
-      {
-        header: 'Status',
-        accessorKey: 'status',
-        cell: ({ getValue, row }) => {
-          const status = getValue() as string
-          const options = ['Proposed', 'Rejected', 'Applied', 'Interview']
-          return (
-            <select
-              value={status}
-              onChange={(e) => {
-                const newStatus = e.target.value
-                onDataChange(
-                  data.map((r, i) => (i === row.index ? { ...r, status: newStatus } : r))
-                )
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="px-3 py-2 rounded-md text-sm bg-transparent border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200 hover:cursor-pointer"
-            >
-              {options.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          )
-        }
-      },
-      {
-        header: 'Date Applied',
-        accessorKey: 'dateApplied'
-      },
-      {
-        header: 'Follow-up',
-        cell: ({ row }) => {
-          const daysSinceApplication = getDaysSince(row.original.dateApplied)
-          const isOverdue = daysSinceApplication > followUpThresholdDays
+  function flushNow(): void {
+    if (Object.keys(rowDrafts).length === 0) return
+    onDataChange(displayedRows)
+    setRowDrafts({})
+  }
 
-          return (
-            <div
-              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm ${
-                isOverdue
-                  ? 'border border-red-200 bg-red-50 text-red-700'
-                  : 'border border-gray-200 bg-gray-50 text-gray-600'
-              }`}
-            >
-              {isOverdue ? <FontAwesomeIcon icon={faClock} className="h-3.5 w-3.5" /> : null}
-              <span>Sem resposta há {daysSinceApplication} dias</span>
-            </div>
-          )
-        }
-      },
-      {
-        header: 'Notes',
-        accessorKey: 'notes'
-      },
-      {
-        header: 'CV',
-        cell: ({ row }) => {
-          const cvPath = row.original.cvPath
+  function updateField(rowId: string, field: EditableField, value: string): void {
+    const baseRow = data.find((row) => row.id === rowId)
+    if (!baseRow) return
 
-          return (
-            <button
-              type="button"
-              disabled={!cvPath}
-              onClick={(e) => {
-                e.stopPropagation()
-                openCv(cvPath)
-              }}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <FontAwesomeIcon icon={faFilePdf} />
-            </button>
-          )
-        }
-      },
-      {
-        header: 'Detalhes',
-        cell: ({ row }) => {
-          return (
-            <button
-              type="button"
-              onClick={() => onSelectApplication(row.original)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
-            >
-              <FontAwesomeIcon icon={faCircleInfo} />
-            </button>
-          )
-        }
+    setRowDrafts((currentDrafts) => {
+      const currentRowDraft = currentDrafts[rowId] ?? {}
+      const nextRowDraft = { ...currentRowDraft }
+
+      if (value === baseRow[field]) {
+        delete nextRowDraft[field]
+      } else {
+        nextRowDraft[field] = value
       }
-    ],
-    getCoreRowModel: getCoreRowModel()
-  })
+
+      if (Object.keys(nextRowDraft).length === 0) {
+        const nextDrafts = { ...currentDrafts }
+        delete nextDrafts[rowId]
+        return nextDrafts
+      }
+
+      return { ...currentDrafts, [rowId]: nextRowDraft }
+    })
+  }
+
+  function followUpBody(row: ApplicationRow): React.JSX.Element {
+    const days = getDaysSince(row.dateApplied)
+    const isOverdue = days > followUpThresholdDays
+
+    return (
+      <div
+        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm ${
+          isOverdue
+            ? 'border border-red-200 bg-red-50 text-red-700'
+            : 'border border-gray-200 bg-gray-50 text-gray-600'
+        }`}
+      >
+        {isOverdue && <FontAwesomeIcon icon={faClock} className="h-3.5 w-3.5" />}
+        <span>Sem resposta há {days} dias</span>
+      </div>
+    )
+  }
+
+  function cvBody(row: ApplicationRow): React.JSX.Element {
+    return (
+      <button
+        type="button"
+        disabled={!row.cvPath}
+        onClick={() => openCv(row.cvPath)}
+        className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <FontAwesomeIcon icon={faFilePdf} />
+      </button>
+    )
+  }
+
+  function detailsBody(row: ApplicationRow): React.JSX.Element {
+    return (
+      <button
+        type="button"
+        onClick={() => onSelectApplication(row)}
+        className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
+      >
+        <FontAwesomeIcon icon={faCircleInfo} />
+      </button>
+    )
+  }
+
+  function deleteBody(row: ApplicationRow): React.JSX.Element {
+    return (
+      <button
+        type="button"
+        onClick={() => handleDeleteJob(row.id)}
+        className="inline-flex items-center justify-center"
+      >
+        <FontAwesomeIcon
+          icon={faTrash}
+          className="text-gray-400 hover:text-gray-600 hover:cursor-pointer w-4"
+        />
+      </button>
+    )
+  }
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="w-full flex flex-col gap-4 mt-5">
+      {/* Top bar */}
       <div className="flex flex-row">
-        {/* Buttons */}
         <div className="grid grid-cols-2 gap-4 w-1/2">
           <div className="rounded-lg bg-white h-9 flex items-center justify-center hover:cursor-pointer border border-gray-100">
             <div className="text-sm font-medium text-gray-800">Active Application</div>
-            <div className="text-sm text-gray-400 ml-2">( 3 )</div>
+            <div className="text-sm text-gray-400 ml-2">( {displayedRows.length} )</div>
           </div>
           <button
             type="button"
@@ -217,7 +228,6 @@ export default function ApplicationTable({
           </button>
         </div>
 
-        {/* Search bar */}
         <div className="w-1/3 ml-auto">
           <input
             type="text"
@@ -229,58 +239,101 @@ export default function ApplicationTable({
 
       {/* Table */}
       <div className="w-full bg-white rounded-2xl overflow-hidden mt-5 shadow-sm border border-gray-100">
-        <table className="w-full min-w-full divide-y divide-gray-100">
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide"
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {table.getRowModel().rows.map((row) => {
-              const daysSinceApplication = getDaysSince(row.original.dateApplied)
-              const isOverdue = daysSinceApplication > followUpThresholdDays
-
-              return (
-                <tr
-                  key={row.id}
-                  className={`odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors ${
-                    isOverdue ? 'ring-1 ring-inset ring-red-200' : ''
-                  }`}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-6 py-4 text-sm text-gray-700 align-middle">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                  <td className="px-6 py-4 align-middle text-center">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteJob(row.index)
-                      }}
-                      className="inline-flex items-center justify-center"
-                    >
-                      <FontAwesomeIcon
-                        icon={faTrash}
-                        className="text-gray-400 hover:text-gray-600 hover:cursor-pointer w-4"
-                      />
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+        <DataTable
+          value={displayedRows}
+          dataKey="id"
+          className="w-full text-black"
+          pt={{
+            thead: { className: 'bg-white' },
+            headerRow: { className: 'border-b border-gray-100' },
+            bodyRow: {
+              className:
+                'odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-100'
+            }
+          }}
+        >
+          <Column
+            field="name"
+            header="Company Name"
+            body={(row) => (
+              <InputText
+                value={row.name}
+                onChange={(e) => updateField(row.id, 'name', e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    flushNow()
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+              />
+            )}
+          />
+          <Column
+            field="role"
+            header="Role / Position"
+            body={(row) => (
+              <InputText
+                value={row.role}
+                onChange={(e) => updateField(row.id, 'role', e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    flushNow()
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+              />
+            )}
+          />
+          <Column
+            field="status"
+            header="Status"
+            body={(row) => (
+              <Dropdown
+                value={row.status}
+                options={statusOptions}
+                onChange={(e) => updateField(row.id, 'status', e.value as string)}
+                className="w-full text-sm"
+              />
+            )}
+          />
+          <Column
+            field="dateApplied"
+            header="Date Applied"
+            body={(row) => (
+              <input
+                type="date"
+                value={row.dateApplied}
+                onChange={(e) => updateField(row.id, 'dateApplied', e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    flushNow()
+                  }
+                }}
+                className="px-3 py-2 rounded-md text-sm border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+              />
+            )}
+          />
+          <Column header="Follow-up" body={followUpBody} />
+          <Column
+            field="notes"
+            header="Notes"
+            body={(row) => (
+              <InputText
+                value={row.notes}
+                onChange={(e) => updateField(row.id, 'notes', e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    flushNow()
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-200"
+              />
+            )}
+          />
+          <Column header="CV" body={cvBody} />
+          <Column header="Detalhes" body={detailsBody} />
+          <Column body={deleteBody} />
+        </DataTable>
       </div>
     </div>
   )
