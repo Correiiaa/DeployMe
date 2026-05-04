@@ -16,7 +16,7 @@ export default function NavBar({
 }: NavBarProps): React.JSX.Element {
   return (
     <header className="relative z-20 h-16 w-full border-b border-white/10 bg-slate-200 text-black flex flex-row">
-      <div className="max-w-7xl w-full mx-auto px-6 flex items-center justify-between h-16">
+      <div className="max-w-400 w-full mx-auto px-6 flex items-center justify-between h-16">
         <FontAwesomeIcon icon={faRocket} className="text-red-500" />
         <div className="text-xl font-bold cursor-pointer flex flex-row items-center gap-4">
           Deploy
