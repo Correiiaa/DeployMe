@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "LinkedIn Easy Apply Inspector",
+  "version": "1.0.0",
+  "description": "Captures LinkedIn Easy Apply submissions and logs job identifiers in the background console.",
+  "permissions": ["webRequest", "declarativeNetRequest", "storage", "identity"],
+  "host_permissions": ["*://*.linkedin.com/*", "https://www.googleapis.com/*"],
+  "oauth2": {
+    "client_id": "899795665285-kegvbm4mcm05ncofuoipb7f0cut9tkob.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file",
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DeployMe"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.linkedin.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
